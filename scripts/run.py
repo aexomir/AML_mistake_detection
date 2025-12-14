@@ -151,24 +151,22 @@ def main():
     )
     
     # Step 3 parser - accepts all remaining args
+    # Use parse_known_args to properly handle arguments that will be passed to core.evaluate
     step3_parser = subparsers.add_parser("step3", help="Run Step 3: evaluation reproduction")
-    step3_parser.add_argument(
-        "eval_args",
-        nargs=argparse.REMAINDER,
-        help="Arguments to pass to core.evaluate (e.g., --split step --backbone omnivore ...)"
-    )
+    # Don't add any arguments here - we'll use parse_known_args to capture remaining args
     
-    args = parser.parse_args()
+    # Parse known args first to get the command
+    args, remaining = parser.parse_known_args()
     
     if args.command == "step2":
         step2_sanity_check(args.features_root)
     elif args.command == "step3":
-        if not args.eval_args:
+        if not remaining:
             print("Error: Step 3 requires arguments for core.evaluate")
             print("\nExample:")
             print("  python scripts/run.py step3 --split step --backbone omnivore --variant MLP --ckpt checkpoints/model.pt --threshold 0.6")
             sys.exit(1)
-        step3_evaluation(args.eval_args)
+        step3_evaluation(remaining)
     else:
         parser.print_help()
         sys.exit(1)
