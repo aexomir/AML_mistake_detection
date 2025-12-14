@@ -1,5 +1,11 @@
 from argparse import ArgumentParser
+import torch
 from constants import Constants as const
+
+
+def get_device():
+    """Check if CUDA is available, return 'cuda' if available, 'cpu' otherwise."""
+    return "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class Config(object):
@@ -28,7 +34,7 @@ class Config(object):
         self.dry_run = False
         self.ckpt = None
         self.seed = 1000
-        self.device = "cuda"
+        # Device will be set after parsing args
 
         self.variant = const.TRANSFORMER_VARIANT
         self.model_name = None
@@ -41,6 +47,17 @@ class Config(object):
         self.args = vars(self.parser.parse_args())
         self.save_model = True
         self.__dict__.update(self.args)
+        
+        # Override device if explicitly provided via CLI, otherwise use auto-detected device
+        if self.args.get('device') is not None:
+            self.device = self.args['device']
+        else:
+            self.device = get_device()
+        
+        # Print device information
+        print(f"Using device: {self.device}")
+        if self.device == "cuda" and torch.cuda.is_available():
+            print(f"CUDA device: {torch.cuda.get_device_name(0)}")
 
     def setup_parser(self):
         """
@@ -69,6 +86,7 @@ class Config(object):
         parser.add_argument("--task_name", type=str, default=const.ERROR_RECOGNITION, help="task name")
         parser.add_argument("--error_category", type=str, help="error category")
         parser.add_argument("--modality", type=str, nargs="+", default=[const.VIDEO], help="audio")
+        parser.add_argument("--device", type=str, default=None, help="device to use (cuda/cpu). If not specified, auto-detects based on CUDA availability")
 
         return parser
 

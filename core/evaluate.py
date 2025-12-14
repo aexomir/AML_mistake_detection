@@ -10,6 +10,11 @@ from constants import Constants as const
 from dataloader.CaptainCookStepDataset import CaptainCookStepDataset, collate_fn
 
 
+def get_device():
+    """Check if CUDA is available, return 'cuda' if available, 'cpu' otherwise."""
+    return "cuda" if torch.cuda.is_available() else "cpu"
+
+
 @dataclass
 class Config(object):
     backbone: str = "omnivore"
@@ -25,7 +30,7 @@ class Config(object):
     test_batch_size: int = 1
     ckpt: Optional[str] = None
     seed: int = 1000
-    device: str = "cuda"
+    device: str = get_device()
 
     variant: str = const.TRANSFORMER_VARIANT
     task_name: str = const.ERROR_RECOGNITION
@@ -55,6 +60,7 @@ if __name__ == "__main__":
     parser.add_argument("--modality", type=str, choices=[const.VIDEO])
     parser.add_argument("--ckpt", type=str, required=True)
     parser.add_argument("--threshold", type=float, required=True, default=0.5)
+    parser.add_argument("--device", type=str, default=None, help="device to use (cuda/cpu). If not specified, auto-detects based on CUDA availability")
     args = parser.parse_args()
 
     conf = Config()
@@ -64,5 +70,9 @@ if __name__ == "__main__":
     conf.phase = args.phase
     conf.modality = args.modality
     conf.ckpt_directory = args.ckpt
+    if args.device is not None:
+        conf.device = args.device
+    else:
+        conf.device = get_device()
 
     eval_er(conf, args.threshold)

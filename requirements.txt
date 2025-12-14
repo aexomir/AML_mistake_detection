@@ -1,6 +1,7 @@
---extra-index-url https://download.pytorch.org/whl/cu118
-torch==2.1.1+cu118
-torchvision==0.16.1+cu118
+# Base requirements (CPU version)
+# For CUDA support, use: pip install -r requirements-cuda.txt
+# For CPU only, use: pip install -r requirements-cpu.txt
+# Or use the install script: python install_deps.py [--cuda]
 
 numpy
 pandas
