@@ -1,5 +1,6 @@
 import csv
 import os
+from collections import defaultdict
 
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
 
@@ -98,10 +99,75 @@ def save_results_to_csv(config, sub_step_metrics, step_metrics, step_normalizati
         writer.writerow(collated_stats)
 
 
+def save_error_type_analysis_to_csv(config, error_type_metrics, step_normalization=False, 
+                                     sub_step_normalization=False, threshold=0.5):
+    """
+    Save error type analysis results to CSV file.
+    
+    Args:
+        config: Configuration object
+        error_type_metrics: Dictionary mapping error type names to their metrics
+        step_normalization: Whether step normalization was used
+        sub_step_normalization: Whether sub-step normalization was used
+        threshold: Threshold used for binary classification
+    """
+    if not error_type_metrics:
+        return
+    
+    results_dir = os.path.join(os.getcwd(), const.RESULTS)
+    task_results_dir = os.path.join(results_dir, config.task_name, "error_type_analysis")
+    os.makedirs(task_results_dir, exist_ok=True)
+    config.model_name = fetch_model_name(config)
+    
+    results_file_path = os.path.join(
+        task_results_dir,
+        f'error_type_analysis_step_{step_normalization}_substep_{sub_step_normalization}_threshold_{threshold}.csv'
+    )
+    
+    file_exists = os.path.isfile(results_file_path)
+    
+    with open(results_file_path, "a", newline='') as csv_file:
+        writer = csv.writer(csv_file, quoting=csv.QUOTE_NONNUMERIC)
+        
+        if not file_exists:
+            # Write header
+            writer.writerow([
+                "Split", "Backbone", "Variant", "Modality",
+                "Error Type", "Count",
+                "Precision", "Recall", "F1", "Accuracy", "AUC", "PR AUC"
+            ])
+        
+        # Sort error types for consistent output
+        sorted_error_types = sorted(error_type_metrics.keys())
+        
+        for error_type in sorted_error_types:
+            metrics = error_type_metrics[error_type]
+            row = [
+                config.split,
+                config.backbone,
+                config.variant,
+                config.modality[0] if isinstance(config.modality, list) else config.modality,
+                error_type,
+                metrics.get('count', 0),
+                convert_and_round(metrics.get(const.PRECISION, 0.0)),
+                convert_and_round(metrics.get(const.RECALL, 0.0)),
+                convert_and_round(metrics.get(const.F1, 0.0)),
+                convert_and_round(metrics.get(const.ACCURACY, 0.0)),
+                convert_and_round(metrics.get(const.AUC, 0.0)),
+                convert_and_round(metrics.get(const.PR_AUC, 0.0))
+            ]
+            writer.writerow(row)
+
+
 def save_results(config, sub_step_metrics, step_metrics, step_normalization=False, sub_step_normalization=False,
-                 threshold=0.5):
+                 threshold=0.5, error_type_metrics=None):
     # 1. Save evaluation results to csv
     save_results_to_csv(config, sub_step_metrics, step_metrics, step_normalization, sub_step_normalization, threshold)
+    
+    # 2. Save error type analysis results to csv
+    if error_type_metrics:
+        save_error_type_analysis_to_csv(config, error_type_metrics, step_normalization, 
+                                        sub_step_normalization, threshold)
 
 
 def store_model(model, config, ckpt_name: str):
@@ -206,17 +272,24 @@ def train_model_base(train_loader, val_loader, config, test_loader=None):
                     f'Train Epoch: {epoch}, Progress: {batch_idx}/{num_batches}, Loss: {loss.item():.6f}'
                 )
 
-            val_losses, sub_step_metrics, step_metrics = test_er_model(model, val_loader, criterion, device, phase='val')
+            val_losses, sub_step_metrics, step_metrics, val_error_type_metrics = test_er_model(
+                model, val_loader, criterion, device, phase='val'
+            )
 
             scheduler.step(step_metrics[const.AUC])
 
+            test_error_type_metrics = None
+            test_losses = []
+            test_sub_step_metrics = {}
+            test_step_metrics = {}
             if test_loader is not None:
-                test_losses, test_sub_step_metrics, test_step_metrics = test_er_model(model, test_loader, criterion,
-                                                                                      device, phase='test')
+                test_losses, test_sub_step_metrics, test_step_metrics, test_error_type_metrics = test_er_model(
+                    model, test_loader, criterion, device, phase='test'
+                )
 
             avg_train_loss = sum(train_losses) / len(train_losses)
             avg_val_loss = sum(val_losses) / len(val_losses)
-            avg_test_loss = sum(test_losses) / len(test_losses)
+            avg_test_loss = sum(test_losses) / len(test_losses) if test_losses else 0.0
 
             precision = step_metrics['precision']
             recall = step_metrics['recall']
@@ -320,6 +393,129 @@ def train_sub_step_test_step_dataset_base(config):
 # ----------------------- TEST BASE FILES -----------------------
 
 
+def compute_error_type_metrics(all_step_targets, all_step_outputs, test_step_error_categories, threshold):
+    """
+    Compute metrics for each error type.
+    
+    Args:
+        all_step_targets: Array of binary targets (0 or 1) for each step
+        all_step_outputs: Array of prediction probabilities for each step
+        test_step_error_categories: List of sets, where each set contains error category labels for a step
+        threshold: Threshold for binary classification
+        
+    Returns:
+        Dictionary mapping error type names to their metrics
+    """
+    # Map error labels to names
+    error_label_to_name = const.ERROR_LABEL_TO_NAME
+    
+    # Initialize storage for each error type
+    error_type_data = defaultdict(lambda: {'targets': [], 'outputs': []})
+    
+    # Also track "No Error" category
+    no_error_data = {'targets': [], 'outputs': []}
+    
+    # Group steps by error type
+    for step_idx, (target, output, error_categories) in enumerate(
+        zip(all_step_targets, all_step_outputs, test_step_error_categories)
+    ):
+        # error_categories is a set of error labels (e.g., {2, 3} or {0})
+        if error_categories is None or len(error_categories) == 0:
+            # If no error categories, treat as no error
+            no_error_data['targets'].append(target)
+            no_error_data['outputs'].append(output)
+        else:
+            # Filter out label 0 and check if there are actual error labels
+            error_labels = {label for label in error_categories if label > 0}
+            
+            if len(error_labels) == 0:
+                # Step has no errors (only label 0 or empty)
+                no_error_data['targets'].append(target)
+                no_error_data['outputs'].append(output)
+            else:
+                # Step has errors - add to all relevant error type categories
+                # Note: A step can belong to multiple error categories if it has multiple error types
+                for error_label in error_labels:
+                    error_name = error_label_to_name.get(error_label, f"Unknown_{error_label}")
+                    error_type_data[error_name]['targets'].append(target)
+                    error_type_data[error_name]['outputs'].append(output)
+    
+    # Compute metrics for each error type
+    error_type_metrics = {}
+    
+    # Process "No Error" category
+    if len(no_error_data['targets']) > 0:
+        no_error_targets = np.array(no_error_data['targets'])
+        no_error_outputs = np.array(no_error_data['outputs'])
+        no_error_preds = (no_error_outputs > threshold).astype(int)
+        
+        error_type_metrics[const.NO_ERROR] = {
+            const.PRECISION: precision_score(no_error_targets, no_error_preds, zero_division=0),
+            const.RECALL: recall_score(no_error_targets, no_error_preds, zero_division=0),
+            const.F1: f1_score(no_error_targets, no_error_preds, zero_division=0),
+            const.ACCURACY: accuracy_score(no_error_targets, no_error_preds),
+            const.AUC: roc_auc_score(no_error_targets, no_error_outputs) if len(np.unique(no_error_targets)) > 1 else 0.0,
+            const.PR_AUC: float(binary_auprc(torch.tensor(no_error_preds), torch.tensor(no_error_targets)).item()) if len(no_error_targets) > 0 else 0.0,
+            'count': len(no_error_targets)
+        }
+    
+    # Process each error type
+    for error_name, data in error_type_data.items():
+        if len(data['targets']) == 0:
+            continue
+            
+        error_targets = np.array(data['targets'])
+        error_outputs = np.array(data['outputs'])
+        error_preds = (error_outputs > threshold).astype(int)
+        
+        # Only compute AUC if we have both classes
+        try:
+            auc = roc_auc_score(error_targets, error_outputs) if len(np.unique(error_targets)) > 1 else 0.0
+        except ValueError:
+            auc = 0.0
+        
+        error_type_metrics[error_name] = {
+            const.PRECISION: precision_score(error_targets, error_preds, zero_division=0),
+            const.RECALL: recall_score(error_targets, error_preds, zero_division=0),
+            const.F1: f1_score(error_targets, error_preds, zero_division=0),
+            const.ACCURACY: accuracy_score(error_targets, error_preds),
+            const.AUC: auc,
+            const.PR_AUC: float(binary_auprc(torch.tensor(error_preds), torch.tensor(error_targets)).item()) if len(error_targets) > 0 else 0.0,
+            'count': len(error_targets)
+        }
+    
+    return error_type_metrics
+
+
+def print_error_type_metrics(error_type_metrics, phase):
+    """Print error type metrics in a formatted way."""
+    if not error_type_metrics:
+        return
+    
+    print("----------------------------------------------------------------")
+    print(f"{phase} Error Type Analysis:")
+    print("----------------------------------------------------------------")
+    print(f"{'Error Type':<25} {'Count':<8} {'Precision':<12} {'Recall':<12} {'F1':<12} {'Accuracy':<12} {'AUC':<12}")
+    print("-" * 95)
+    
+    # Sort by error type name for consistent output
+    sorted_error_types = sorted(error_type_metrics.keys())
+    
+    for error_type in sorted_error_types:
+        metrics = error_type_metrics[error_type]
+        count = metrics.get('count', 0)
+        precision = metrics.get(const.PRECISION, 0.0)
+        recall = metrics.get(const.RECALL, 0.0)
+        f1 = metrics.get(const.F1, 0.0)
+        accuracy = metrics.get(const.ACCURACY, 0.0)
+        auc = metrics.get(const.AUC, 0.0)
+        
+        print(f"{error_type:<25} {count:<8} {precision:<12.4f} {recall:<12.4f} {f1:<12.4f} "
+              f"{accuracy:<12.4f} {auc:<12.4f}")
+    
+    print("----------------------------------------------------------------")
+
+
 def test_er_model(model, test_loader, criterion, device, phase, step_normalization=True, sub_step_normalization=True,
                   threshold=0.6):
     total_samples = 0
@@ -331,10 +527,18 @@ def test_er_model(model, test_loader, criterion, device, phase, step_normalizati
     test_losses = []
 
     test_step_start_end_list = []
+    test_step_error_categories = []  # Store error categories for each step
     counter = 0
 
     with torch.no_grad():
-        for data, target in test_loader:
+        for batch_data in test_loader:
+            # Handle both old format (data, target) and new format (data, target, error_categories)
+            if len(batch_data) == 3:
+                data, target, error_category_labels = batch_data
+            else:
+                data, target = batch_data
+                error_category_labels = None
+            
             data, target = data.to(device), target.to(device)
             output = model(data)
             total_samples += data.shape[0]
@@ -344,6 +548,11 @@ def test_er_model(model, test_loader, criterion, device, phase, step_normalizati
             sigmoid_output = output.sigmoid()
             all_outputs.append(sigmoid_output.detach().cpu().numpy().reshape(-1))
             all_targets.append(target.detach().cpu().numpy().reshape(-1))
+
+            # Store error categories for this batch (one per step in the batch)
+            if error_category_labels is not None:
+                # error_category_labels is a tuple of sets, one per step in the batch
+                test_step_error_categories.extend(error_category_labels)
 
             test_step_start_end_list.append((counter, counter + data.shape[0]))
             counter += data.shape[0]
@@ -449,4 +658,15 @@ def test_er_model(model, test_loader, criterion, device, phase, step_normalizati
     print(f"{phase} Step Level Metrics: {step_metrics}")
     print("----------------------------------------------------------------")
 
-    return test_losses, sub_step_metrics, step_metrics
+    # -------------------------- Error Type Analysis --------------------------
+    error_type_metrics = None
+    if test_step_error_categories and len(test_step_error_categories) == len(all_step_targets):
+        error_type_metrics = compute_error_type_metrics(
+            all_step_targets, all_step_outputs, test_step_error_categories, threshold
+        )
+        print_error_type_metrics(error_type_metrics, phase)
+    elif test_step_error_categories:
+        print(f"Warning: Mismatch between error categories ({len(test_step_error_categories)}) "
+              f"and step targets ({len(all_step_targets)}). Skipping error-type analysis.")
+
+    return test_losses, sub_step_metrics, step_metrics, error_type_metrics

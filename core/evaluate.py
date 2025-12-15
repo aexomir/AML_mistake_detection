@@ -48,7 +48,16 @@ def eval_er(config, threshold):
     test_loader = DataLoader(test_dataset, batch_size=config.test_batch_size, collate_fn=collate_fn)
 
     # Calculate the evaluation metrics
-    test_er_model(model, test_loader, criterion, config.device, phase="test", step_normalization=True, sub_step_normalization=True, threshold=threshold)
+    from base import save_results
+    test_losses, sub_step_metrics, step_metrics, error_type_metrics = test_er_model(
+        model, test_loader, criterion, config.device, phase="test", 
+        step_normalization=True, sub_step_normalization=True, threshold=threshold
+    )
+    
+    # Save results including error type analysis
+    save_results(config, sub_step_metrics, step_metrics, 
+                 step_normalization=True, sub_step_normalization=True, 
+                 threshold=threshold, error_type_metrics=error_type_metrics)
 
 
 if __name__ == "__main__":
