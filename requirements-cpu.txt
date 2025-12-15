@@ -1,0 +1,16 @@
+torch==2.2.0
+torchvision==0.17.0
+
+numpy
+pandas
+scikit-learn
+tqdm
+loguru
+matplotlib
+seaborn
+wandb
+torcheval
+
+pyrebase4
+yacs
+

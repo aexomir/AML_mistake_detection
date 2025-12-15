@@ -1,0 +1,8 @@
+*.zip
+.venv/
+data/
+.DS_Store
+__pycache__/
+logo.png
+.DS_Store
+Icon

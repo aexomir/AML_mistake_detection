@@ -1,0 +1,17 @@
+# Base requirements (CPU version)
+# For CUDA support, use: pip install -r requirements-cuda.txt
+# For CPU only, use: pip install -r requirements-cpu.txt
+# Or use the install script: python install_deps.py [--cuda]
+
+numpy
+pandas
+scikit-learn
+tqdm
+loguru
+matplotlib
+seaborn
+wandb
+torcheval
+
+pyrebase4
+yacs
