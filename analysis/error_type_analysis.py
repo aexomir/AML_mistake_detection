@@ -8,10 +8,18 @@ for existing baselines without modifying core/evaluate.py.
 import argparse
 import json
 import os
+import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional
 
+# Add parent directory to path to allow imports - MUST be before any local imports
+script_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(script_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+# Now import everything else
 import numpy as np
 import pandas as pd
 import torch
@@ -32,10 +40,18 @@ try:
 except ImportError:
     HAS_PLOTTING = False
 
-from base import fetch_model
-from constants import Constants as const
-from core.config import Config
-from dataloader.CaptainCookStepDataset import CaptainCookStepDataset, collate_fn
+# Import project modules - these should work now with parent_dir in path
+try:
+    from base import fetch_model
+    from constants import Constants as const
+    from dataloader.CaptainCookStepDataset import CaptainCookStepDataset, collate_fn
+except ImportError as e:
+    print(f"Error importing modules. Current working directory: {os.getcwd()}")
+    print(f"Script directory: {script_dir}")
+    print(f"Parent directory: {parent_dir}")
+    print(f"Python path: {sys.path}")
+    print(f"Import error: {e}")
+    raise
 
 
 @dataclass
@@ -246,7 +262,7 @@ def compute_metrics_per_error_type(
 
 
 def analyze_error_types(
-    config: Config,
+    config,
     threshold: float = 0.5,
     step_normalization: bool = True,
     sub_step_normalization: bool = True,
@@ -351,7 +367,7 @@ def analyze_error_types(
     return df
 
 
-def save_results(df: pd.DataFrame, output_dir: str, config: Config, threshold: float):
+def save_results(df: pd.DataFrame, output_dir: str, config, threshold: float):
     """Save results to CSV and JSON."""
     os.makedirs(output_dir, exist_ok=True)
     
@@ -374,7 +390,7 @@ def save_results(df: pd.DataFrame, output_dir: str, config: Config, threshold: f
     return csv_path, json_path
 
 
-def plot_results(df: pd.DataFrame, output_dir: str, config: Config, threshold: float):
+def plot_results(df: pd.DataFrame, output_dir: str, config, threshold: float):
     """Create visualization plots for per-error-type metrics."""
     if not HAS_PLOTTING:
         print("Matplotlib/seaborn not available, skipping visualization.")
@@ -553,17 +569,24 @@ def main():
     
     args = parser.parse_args()
     
-    # Create config
-    config = Config()
-    config.split = args.split
-    config.backbone = args.backbone
-    config.variant = args.variant
-    config.ckpt_directory = args.ckpt
-    config.test_batch_size = 1
-    if args.device is not None:
-        config.device = args.device
-    else:
-        config.device = get_device()
+    # Create a simple config object (avoid using Config class which parses args)
+    class SimpleConfig:
+        def __init__(self):
+            self.backbone = args.backbone
+            self.modality = "video"
+            self.phase = "test"
+            self.segment_length = 1
+            self.segment_features_directory = "data/"
+            self.split = args.split
+            self.batch_size = 1
+            self.test_batch_size = 1
+            self.ckpt_directory = args.ckpt
+            self.variant = args.variant
+            self.task_name = const.ERROR_RECOGNITION
+            self.device = args.device if args.device is not None else get_device()
+            self.seed = 1000
+    
+    config = SimpleConfig()
     
     # Run analysis
     df = analyze_error_types(
@@ -587,4 +610,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
