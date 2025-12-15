@@ -1,0 +1,2 @@
+"Split","Backbone","Variant","Modality","Sub-Step Precision","Sub-Step Recall","Sub-Step F1","Sub-Step Accuracy","Sub-Step AUC","Sub-Step PR AUC","Step Precision","Step Recall","Step F1","Step Accuracy","Step AUC","Step PR AUC"
+"recordings","omnivore","MLP","['video']",39.65,56.88,46.73,57.35,59.88,36.73,40.91,85.89,55.42,50.37,63.03,40.2
