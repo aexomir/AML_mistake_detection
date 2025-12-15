@@ -277,3 +277,32 @@ def collate_fn(batch):
     step_labels = torch.cat(step_labels, dim=0)
 
     return step_features, step_labels
+
+
+def collate_fn_rnn(batch):
+    """
+    Collate function for RNN that handles variable-length sequences.
+    Pads sequences to the same length and returns lengths for pack_padded_sequence.
+    """
+    step_features, step_labels = zip(*batch)
+    
+    # Get sequence lengths
+    lengths = torch.tensor([feat.shape[0] for feat in step_features], dtype=torch.long)
+    
+    # Get max sequence length
+    max_len = lengths.max().item()
+    
+    # Get feature dimension
+    feature_dim = step_features[0].shape[1]
+    
+    # Pad sequences
+    padded_features = torch.zeros(len(batch), max_len, feature_dim)
+    for i, feat in enumerate(step_features):
+        seq_len = feat.shape[0]
+        padded_features[i, :seq_len, :] = feat
+    
+    # Get labels (all labels in a sequence should be the same, so take the first one)
+    # Labels are shape [T, 1], we need [1] per sequence
+    labels = torch.stack([label[0] for label in step_labels])
+    
+    return padded_features, labels, lengths

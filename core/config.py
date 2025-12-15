@@ -87,6 +87,14 @@ class Config(object):
         parser.add_argument("--error_category", type=str, help="error category")
         parser.add_argument("--modality", type=str, nargs="+", default=[const.VIDEO], help="audio")
         parser.add_argument("--device", type=str, default=None, help="device to use (cuda/cpu). If not specified, auto-detects based on CUDA availability")
+        
+        # RNN-specific hyperparameters
+        parser.add_argument("--rnn_hidden_size", type=int, default=256, help="RNN hidden size (default: 256)")
+        parser.add_argument("--rnn_num_layers", type=int, default=2, help="Number of RNN layers (default: 2)")
+        parser.add_argument("--rnn_dropout", type=float, default=0.2, help="RNN dropout rate (default: 0.2)")
+        parser.add_argument("--rnn_bidirectional", type=lambda x: (str(x).lower() == 'true'), default=True, help="Use bidirectional RNN (default: True)")
+        parser.add_argument("--rnn_use_attention", type=lambda x: (str(x).lower() == 'true'), default=False, help="Use attention pooling (default: False)")
+        parser.add_argument("--rnn_type", type=str, default="LSTM", choices=["LSTM", "GRU"], help="RNN type: LSTM or GRU (default: LSTM)")
 
         return parser
 
