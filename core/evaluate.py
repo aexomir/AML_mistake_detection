@@ -34,6 +34,7 @@ class Config(object):
 
     variant: str = const.TRANSFORMER_VARIANT
     task_name: str = const.ERROR_RECOGNITION
+    model_name: Optional[str] = None
 
 
 def eval_er(config, threshold):
@@ -77,11 +78,15 @@ if __name__ == "__main__":
     conf.backbone = args.backbone
     conf.variant = args.variant
     conf.phase = args.phase
-    conf.modality = args.modality
+    # Convert modality to list format expected by the codebase
+    # modality is optional in args, default to video if not provided
+    conf.modality = [args.modality] if args.modality else [const.VIDEO]
     conf.ckpt_directory = args.ckpt
     if args.device is not None:
         conf.device = args.device
     else:
         conf.device = get_device()
+    # Initialize model_name as None (will be set by fetch_model_name if needed)
+    conf.model_name = None
 
     eval_er(conf, args.threshold)
