@@ -265,19 +265,15 @@ class CaptainCookStepDataset(Dataset):
         assert step_features is not None, f"Features not found for recording_id: {recording_id}"
         assert step_labels is not None, f"Labels not found for recording_id: {recording_id}"
 
-        # Extract error category labels from the first entry in step_start_end_list
-        # All entries in the list should have the same error_category_labels for a given step
-        error_category_labels = step_start_end_list[0][3] if step_start_end_list else set()
-
-        return step_features, step_labels, error_category_labels
+        return step_features, step_labels
 
 
 def collate_fn(batch):
-    # batch is a list of tuples, and each tuple is (step_features, step_labels, error_category_labels)
-    step_features, step_labels, error_category_labels = zip(*batch)
+    # batch is a list of tuples, and each tuple is (step_features, step_labels)
+    step_features, step_labels = zip(*batch)
 
     # Stack the step_features and step_labels
     step_features = torch.cat(step_features, dim=0)
     step_labels = torch.cat(step_labels, dim=0)
 
-    return step_features, step_labels, error_category_labels
+    return step_features, step_labels
