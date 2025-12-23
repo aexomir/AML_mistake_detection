@@ -1,0 +1,7 @@
+"Split","Backbone","Variant","Modality","Error Type","Count","Precision","Recall","F1","Accuracy","AUC","PR AUC"
+"recordings","omnivore","MLP","video","Measurement Error",50,100.0,92.0,95.83,92.0,0.0,100.0
+"recordings","omnivore","MLP","video","No Error",501,15.77,78.87,26.29,37.33,58.29,15.44
+"recordings","omnivore","MLP","video","Preparation Error",49,100.0,85.71,92.31,85.71,0.0,100.0
+"recordings","omnivore","MLP","video","Technique Error",59,100.0,89.83,94.64,89.83,0.0,100.0
+"recordings","omnivore","MLP","video","Temperature Error",8,100.0,100.0,100.0,100.0,0.0,100.0
+"recordings","omnivore","MLP","video","Timing Error",26,100.0,88.46,93.88,88.46,0.0,100.0
