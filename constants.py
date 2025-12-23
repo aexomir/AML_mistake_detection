@@ -61,15 +61,4 @@ class Constants:
     TEMPERATURE_ERROR = "Temperature Error"
     MEASUREMENT_ERROR = "Measurement Error"
     TIMING_ERROR = "Timing Error"
-    NO_ERROR = "No Error"
-    
-    # Error category label mappings (for analysis)
-    ERROR_LABEL_TO_NAME = {
-        0: NO_ERROR,
-        2: PREPARATION_ERROR,
-        3: TEMPERATURE_ERROR,
-        4: MEASUREMENT_ERROR,
-        5: TIMING_ERROR,
-        6: TECHNIQUE_ERROR
-    }
 
