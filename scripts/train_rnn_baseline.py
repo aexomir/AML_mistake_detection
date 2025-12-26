@@ -223,7 +223,7 @@ def train_rnn_baseline(config):
     criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([2.5], dtype=torch.float32).to(device))
     scheduler = ReduceLROnPlateau(
         optimizer, mode='max',
-        factor=0.1, patience=5, verbose=True,
+        factor=0.1, patience=5,
         threshold=1e-4, threshold_mode="abs", min_lr=1e-7
     )
 
