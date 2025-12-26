@@ -176,7 +176,7 @@ class RNNBaseline(nn.Module):
         
         # Pack sequences if lengths are provided
         if lengths is not None:
-            x = nn.utils.rnn.pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
+            x = nn.utils.rnn.pack_padded_sequence(x, lengths.cpu(), batch_first=True, enforce_sorted=False)
         
         # RNN forward pass
         rnn_out, hidden = self.rnn(x)
@@ -192,7 +192,7 @@ class RNNBaseline(nn.Module):
             attention_weights = torch.softmax(attention_weights, dim=1)
             # Mask out padding positions if lengths provided
             if lengths is not None:
-                mask = torch.arange(rnn_out.size(1), device=rnn_out.device).unsqueeze(0) < lengths.unsqueeze(1)
+                mask = torch.arange(rnn_out.size(1), device=rnn_out.device).unsqueeze(0) < lengths.to(rnn_out.device).unsqueeze(1)
                 mask = mask.unsqueeze(-1).float()
                 attention_weights = attention_weights * mask
                 attention_weights = attention_weights / (attention_weights.sum(dim=1, keepdim=True) + 1e-8)
