@@ -1,0 +1,5 @@
+Model,Backbone,Precision,Recall,F1,Accuracy,AUC
+MLP,omnivore,0.410,0.299,0.346,0.683,0.654
+MLP,slowfast,0.391,0.038,0.069,0.714,0.578
+Transformer,omnivore,0.445,0.661,0.532,0.674,0.746
+Transformer,slowfast,0.442,0.319,0.371,0.697,0.653
