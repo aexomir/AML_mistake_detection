@@ -14,9 +14,9 @@ from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_sco
 from torcheval.metrics.functional import binary_auprc
 from tqdm import tqdm
 
-from core.models.blocks import fetch_input_dim, MLP
+from core.models.blocks import fetch_input_dim, MLP, RNNBaseline
 from core.models.er_former import ErFormer
-from dataloader.CaptainCookStepDataset import collate_fn, CaptainCookStepDataset
+from dataloader.CaptainCookStepDataset import collate_fn, collate_fn_rnn, CaptainCookStepDataset
 from dataloader.CaptainCookSubStepDataset import CaptainCookSubStepDataset
 
 
@@ -50,6 +50,18 @@ def fetch_model(config):
     elif config.variant == const.TRANSFORMER_VARIANT:
         if config.backbone in [const.OMNIVORE, const.RESNET3D, const.X3D, const.SLOWFAST, const.IMAGEBIND]:
             model = ErFormer(config)
+    elif config.variant == const.RNN_VARIANT:
+        if config.backbone in [const.OMNIVORE, const.RESNET3D, const.X3D, const.SLOWFAST, const.IMAGEBIND]:
+            # Get RNN hyperparameters from config, with defaults
+            hidden_size = getattr(config, 'rnn_hidden_size', 256)
+            num_layers = getattr(config, 'rnn_num_layers', 2)
+            dropout = getattr(config, 'rnn_dropout', 0.2)
+            bidirectional = getattr(config, 'rnn_bidirectional', True)
+            use_attention = getattr(config, 'rnn_use_attention', False)
+            rnn_type = getattr(config, 'rnn_type', 'LSTM')
+            model = RNNBaseline(config, hidden_size=hidden_size, num_layers=num_layers,
+                               dropout=dropout, bidirectional=bidirectional,
+                               use_attention=use_attention, rnn_type=rnn_type)
 
     assert model is not None, f"Model not found for variant: {config.variant} and backbone: {config.backbone}"
     model.to(config.device)
@@ -334,10 +346,21 @@ def test_er_model(model, test_loader, criterion, device, phase, step_normalizati
     counter = 0
 
     with torch.no_grad():
-        for data, target in test_loader:
-            data, target = data.to(device), target.to(device)
-            output = model(data)
-            total_samples += data.shape[0]
+        for batch_data in test_loader:
+            # Handle both standard collate (data, target) and RNN collate (data, target, lengths)
+            if len(batch_data) == 3:
+                # RNN collate function returns (padded_features, labels, lengths)
+                data, target, lengths = batch_data
+                data, target, lengths = data.to(device), target.to(device), lengths.to(device)
+                output = model(data, lengths=lengths)
+            else:
+                # Standard collate function returns (data, target)
+                data, target = batch_data
+                data, target = data.to(device), target.to(device)
+                output = model(data)
+            
+            batch_size = data.shape[0] if len(data.shape) > 1 else 1
+            total_samples += batch_size
             loss = criterion(output, target)
             test_losses.append(loss.item())
 
@@ -345,8 +368,9 @@ def test_er_model(model, test_loader, criterion, device, phase, step_normalizati
             all_outputs.append(sigmoid_output.detach().cpu().numpy().reshape(-1))
             all_targets.append(target.detach().cpu().numpy().reshape(-1))
 
-            test_step_start_end_list.append((counter, counter + data.shape[0]))
-            counter += data.shape[0]
+            batch_size = data.shape[0] if len(data.shape) > 1 else 1
+            test_step_start_end_list.append((counter, counter + batch_size))
+            counter += batch_size
 
             # Set the description of the tqdm instance to show the loss
             test_loader.set_description(f'{phase} Progress: {total_samples}/{num_batches}')
@@ -404,10 +428,11 @@ def test_er_model(model, test_loader, criterion, device, phase, step_normalizati
         #     step_output = neg_output
         step_output = np.array(step_output)
         # # Scale the output to [0, 1]
-        if start - end > 1:
+        if end - start > 1:
             if sub_step_normalization:
                 prob_range = np.max(step_output) - np.min(step_output)
-                step_output = (step_output - np.min(step_output)) / prob_range
+                if prob_range > 0:
+                    step_output = (step_output - np.min(step_output)) / prob_range
 
         mean_step_output = np.mean(step_output)
         step_target = 1 if np.mean(step_target) > 0.95 else 0
@@ -420,7 +445,8 @@ def test_er_model(model, test_loader, criterion, device, phase, step_normalizati
     # # Scale the output to [0, 1]
     if step_normalization:
         prob_range = np.max(all_step_outputs) - np.min(all_step_outputs)
-        all_step_outputs = (all_step_outputs - np.min(all_step_outputs)) / prob_range
+        if prob_range > 0:
+            all_step_outputs = (all_step_outputs - np.min(all_step_outputs)) / prob_range
 
     all_step_targets = np.array(all_step_targets)
 

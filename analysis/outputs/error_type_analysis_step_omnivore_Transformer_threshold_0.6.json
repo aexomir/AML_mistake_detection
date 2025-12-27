@@ -1,0 +1,72 @@
+[
+  {
+    "error_type": "Global (All)",
+    "error_label": NaN,
+    "accuracy": 0.6738848088412402,
+    "precision": 0.4445452483556362,
+    "recall": 0.6613801248523705,
+    "f1": 0.5317056629365887,
+    "sample_count": 42347,
+    "auc": 0.7461755308526944
+  },
+  {
+    "error_type": "No Error",
+    "error_label": 0.0,
+    "accuracy": 0.6727170658682635,
+    "precision": 0.3132361189007291,
+    "recall": 0.6461315979754158,
+    "f1": 0.4219273808961707,
+    "sample_count": 37408,
+    "auc": 0.744024451494492
+  },
+  {
+    "error_type": "Timing Error",
+    "error_label": 5.0,
+    "accuracy": 0.6567901234567901,
+    "precision": 1.0,
+    "recall": 0.6567901234567901,
+    "f1": 0.7928464977645305,
+    "sample_count": 2835,
+    "auc": NaN
+  },
+  {
+    "error_type": "Preparation Error",
+    "error_label": 2.0,
+    "accuracy": 0.6237668161434977,
+    "precision": 1.0,
+    "recall": 0.6237668161434977,
+    "f1": 0.7682960508146921,
+    "sample_count": 2230,
+    "auc": NaN
+  },
+  {
+    "error_type": "Technique Error",
+    "error_label": 6.0,
+    "accuracy": 0.5974672094075079,
+    "precision": 1.0,
+    "recall": 0.5974672094075079,
+    "f1": 0.7480181200453001,
+    "sample_count": 2211,
+    "auc": NaN
+  },
+  {
+    "error_type": "Measurement Error",
+    "error_label": 4.0,
+    "accuracy": 0.6921850079744817,
+    "precision": 1.0,
+    "recall": 0.6921850079744817,
+    "f1": 0.8180961357210179,
+    "sample_count": 1881,
+    "auc": NaN
+  },
+  {
+    "error_type": "Temperature Error",
+    "error_label": 3.0,
+    "accuracy": 0.8032786885245902,
+    "precision": 1.0,
+    "recall": 0.8032786885245902,
+    "f1": 0.8909090909090909,
+    "sample_count": 732,
+    "auc": NaN
+  }
+]

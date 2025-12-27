@@ -1,0 +1,11 @@
+Model,Backbone,Split,Precision,Recall,F1,Accuracy,AUC
+MLP,omnivore,recordings,0.396,0.569,0.467,0.574,0.599
+MLP,omnivore,step,0.410,0.299,0.346,0.683,0.654
+MLP,slowfast,recordings,0.345,0.174,0.231,0.620,0.538
+MLP,slowfast,step,0.391,0.038,0.069,0.714,0.578
+RNN,omnivore,recordings,0.457,0.398,0.426,0.614,0.646
+RNN,slowfast,recordings,0.359,1.000,0.529,0.359,0.500
+Transformer,omnivore,recordings,0.449,0.351,0.394,0.645,0.625
+Transformer,omnivore,step,0.445,0.661,0.532,0.674,0.746
+Transformer,slowfast,recordings,0.389,0.465,0.423,0.584,0.602
+Transformer,slowfast,step,0.442,0.319,0.371,0.697,0.653
