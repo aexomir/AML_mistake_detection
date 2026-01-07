@@ -1,0 +1,2 @@
+"Split","Backbone","Variant","Modality","Sub-Step Precision","Sub-Step Recall","Sub-Step F1","Sub-Step Accuracy","Sub-Step AUC","Sub-Step PR AUC","Step Precision","Step Recall","Step F1","Step Accuracy","Step AUC","Step PR AUC"
+"recordings","egovlp","RNN","['video']",35.92,100.0,52.85,35.92,50.0,35.92,0.0,0.0,0.0,64.08,50.0,35.92

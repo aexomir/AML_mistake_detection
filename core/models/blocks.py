@@ -25,7 +25,7 @@ def fetch_input_dim(config, decoder=False):
         k = len(config.modality)
         return 1024 * k
     elif config.backbone == const.EGOVLP:
-        return 512  # CLIP ViT-B/32 features (update if using different EgoVLP checkpoint)
+        return 768  # Updated to 768
     elif config.backbone == const.PERCEPTIONENCODER:
         return 768  # VideoMAE-base features
     else:
