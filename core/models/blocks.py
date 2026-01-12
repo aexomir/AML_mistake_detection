@@ -14,7 +14,7 @@ def fetch_input_dim(config, decoder=False):
     if config.backbone == const.OMNIVORE:
         return 1024
     elif config.backbone == const.SLOWFAST:
-        return 400
+        return 2304
     elif config.backbone == const.X3D:
         return 400
     elif config.backbone == const.RESNET3D:
@@ -24,6 +24,12 @@ def fetch_input_dim(config, decoder=False):
             return 1024
         k = len(config.modality)
         return 1024 * k
+    elif config.backbone == const.EGOVLP:
+        return 768  # Updated to 768
+    elif config.backbone == const.PERCEPTIONENCODER:
+        return 768  # VideoMAE-base features
+    else:
+        raise ValueError(f"Unsupported backbone: {config.backbone}")
 
 
 

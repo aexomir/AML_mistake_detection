@@ -74,6 +74,10 @@ def extract_from_colab_reproduce():
                 backbone = 'omnivore'
             elif '--backbone slowfast' in source_text:
                 backbone = 'slowfast'
+            elif '--backbone egovlp' in source_text:
+                backbone = 'egovlp'
+            elif '--backbone perceptionencoder' in source_text:
+                backbone = 'perceptionencoder'
             
             if '--split step' in source_text:
                 split = 'step'
@@ -136,6 +140,10 @@ def extract_from_rnn_baseline():
                 backbone = 'omnivore'
             elif '--backbone slowfast' in source_text or 'slowfast' in source_text.lower():
                 backbone = 'slowfast'
+            elif '--backbone egovlp' in source_text or 'egovlp' in source_text.lower():
+                backbone = 'egovlp'
+            elif '--backbone perceptionencoder' in source_text or 'perceptionencoder' in source_text.lower():
+                backbone = 'perceptionencoder'
             
             if '--split step' in source_text:
                 split = 'step'
@@ -209,6 +217,77 @@ def extract_from_rnn_baseline():
     return results
 
 
+def extract_from_new_backbones():
+    """Extract metrics from train_new_backbones.ipynb"""
+    notebook_path = Path(__file__).parent.parent / "notebooks" / "train_new_backbones.ipynb"
+    
+    if not notebook_path.exists():
+        return []
+    
+    with open(notebook_path, 'r', encoding='utf-8') as f:
+        notebook = json.load(f)
+    
+    results = []
+    
+    for cell in notebook['cells']:
+        if 'outputs' in cell and len(cell['outputs']) > 0:
+            source_text = ''.join(cell.get('source', []))
+            
+            # Determine model variant, backbone, and split from source
+            variant = None
+            backbone = None
+            split = None
+            threshold = None
+            
+            if '--variant MLP' in source_text:
+                variant = 'MLP'
+            elif '--variant Transformer' in source_text:
+                variant = 'Transformer'
+            elif '--variant RNN' in source_text:
+                variant = 'RNN'
+            
+            if '--backbone egovlp' in source_text or 'egovlp' in source_text.lower():
+                backbone = 'egovlp'
+            elif '--backbone perceptionencoder' in source_text or 'perceptionencoder' in source_text.lower():
+                backbone = 'perceptionencoder'
+            
+            if '--split step' in source_text:
+                split = 'step'
+            elif '--split recordings' in source_text:
+                split = 'recordings'
+            
+            if '--threshold 0.6' in source_text:
+                threshold = 0.6
+            elif '--threshold 0.4' in source_text:
+                threshold = 0.4
+            
+            # Extract metrics from outputs
+            for output in cell['outputs']:
+                if 'text' in output:
+                    output_text = ''.join(output['text'])
+                    
+                    if 'test Step Level Metrics' in output_text or 'test Sub Step Level Metrics' in output_text:
+                        extracted_metrics = extract_metrics_from_output(output_text)
+                        
+                        for level, level_metrics in extracted_metrics.items():
+                            if level_metrics and variant and backbone:
+                                results.append({
+                                    'Model': variant,
+                                    'Backbone': backbone,
+                                    'Split': split,
+                                    'Threshold': threshold,
+                                    'Level': level,
+                                    'Precision': level_metrics.get('precision'),
+                                    'Recall': level_metrics.get('recall'),
+                                    'F1': level_metrics.get('f1'),
+                                    'Accuracy': level_metrics.get('accuracy'),
+                                    'AUC': level_metrics.get('auc'),
+                                    'PR_AUC': level_metrics.get('pr_auc'),
+                                })
+    
+    return results
+
+
 def main():
     """Main extraction function."""
     print("Extracting metrics from colab_reproduce_results.ipynb...")
@@ -219,8 +298,12 @@ def main():
     rnn_results = extract_from_rnn_baseline()
     print(f"  Found {len(rnn_results)} metric entries")
     
+    print("Extracting metrics from train_new_backbones.ipynb...")
+    new_backbone_results = extract_from_new_backbones()
+    print(f"  Found {len(new_backbone_results)} metric entries")
+    
     # Combine results
-    all_results = colab_results + rnn_results
+    all_results = colab_results + rnn_results + new_backbone_results
     
     # Create DataFrame
     df = pd.DataFrame(all_results)

@@ -78,7 +78,9 @@ class Config(object):
         parser.add_argument("--ckpt", type=str, default=None, help="checkpoint path")
         parser.add_argument("--seed", type=int, default=42, help="random seed (default: 1000)")
 
-        parser.add_argument("--backbone", type=str, default=const.OMNIVORE, help="backbone model")
+        parser.add_argument("--backbone", type=str, default=const.OMNIVORE, 
+                            choices=[const.OMNIVORE, const.SLOWFAST, const.RESNET3D, const.X3D, const.IMAGEBIND, const.EGOVLP, const.PERCEPTIONENCODER], 
+                            help="backbone model")
         parser.add_argument("--ckpt_directory", type=str, default="/data/rohith/captain_cook/checkpoints", help="checkpoint directory")
         parser.add_argument("--split", type=str, default=const.RECORDINGS_SPLIT, help="split")
         parser.add_argument("--variant", type=str, default=const.TRANSFORMER_VARIANT, help="variant")

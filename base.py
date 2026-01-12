@@ -44,14 +44,14 @@ def fetch_model_name_ecr(config):
 def fetch_model(config):
     model = None
     if config.variant == const.MLP_VARIANT:
-        if config.backbone in [const.OMNIVORE, const.RESNET3D, const.X3D, const.SLOWFAST, const.IMAGEBIND]:
+        if config.backbone in [const.OMNIVORE, const.RESNET3D, const.X3D, const.SLOWFAST, const.IMAGEBIND, const.EGOVLP, const.PERCEPTIONENCODER]:
             input_dim = fetch_input_dim(config)
             model = MLP(input_dim, 512, 1)
     elif config.variant == const.TRANSFORMER_VARIANT:
-        if config.backbone in [const.OMNIVORE, const.RESNET3D, const.X3D, const.SLOWFAST, const.IMAGEBIND]:
+        if config.backbone in [const.OMNIVORE, const.RESNET3D, const.X3D, const.SLOWFAST, const.IMAGEBIND, const.EGOVLP, const.PERCEPTIONENCODER]:
             model = ErFormer(config)
     elif config.variant == const.RNN_VARIANT:
-        if config.backbone in [const.OMNIVORE, const.RESNET3D, const.X3D, const.SLOWFAST, const.IMAGEBIND]:
+        if config.backbone in [const.OMNIVORE, const.RESNET3D, const.X3D, const.SLOWFAST, const.IMAGEBIND, const.EGOVLP, const.PERCEPTIONENCODER]:
             # Get RNN hyperparameters from config, with defaults
             hidden_size = getattr(config, 'rnn_hidden_size', 256)
             num_layers = getattr(config, 'rnn_num_layers', 2)
@@ -168,7 +168,7 @@ def train_model_base(train_loader, val_loader, config, test_loader=None):
     criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([2.5], dtype=torch.float32).to(device))
     scheduler = ReduceLROnPlateau(
         optimizer, mode='max',
-        factor=0.1, patience=5, verbose=True,
+        factor=0.1, patience=5, 
         threshold=1e-4, threshold_mode="abs", min_lr=1e-7
     )
     # criterion = nn.BCEWithLogitsLoss()
